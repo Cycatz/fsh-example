@@ -1,5 +1,5 @@
 * fsh-example
-This repository shows how to use ~fsh~ syscall hooking library.
+This repository shows how to use [[https://github.com/Cycatz/fsh][fsh]] syscall hooking library.
 
 
 First, set ~MODULE_NAME~ and ~FSH_CUSTOM_OBJS~ variables in ~makefile~:
@@ -21,7 +21,7 @@ sys_openat
 You can use the filename whatever you prefer, just remember to provide it later when executing the header generation script.
 
 
-The hooking function of ~sys_openat~, defined in ~fsh_example_mod.c~, prints the filename whenever a specific uid is matched:
+The hooking function of ~sys_openat~, defined in ~fsh_example_mod.c~, prints the filename whenever the user who opened the file matches a specific uid:
 #+begin_src c
 FSH_SYSCALL_OVERRIDE(sys_openat)
 {
