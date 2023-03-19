@@ -1,0 +1,2 @@
+sys_execve
+sys_openat

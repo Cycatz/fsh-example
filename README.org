@@ -1,0 +1,67 @@
+* fsh-example
+This repository shows how to use ~fsh~ syscall hooking library.
+
+
+First, set ~MODULE_NAME~ and ~FSH_CUSTOM_OBJS~ variables in ~makefile~:
+#+begin_src makefile
+# Makefile
+MODULE_NAME := fsh_example
+FSH_CUSTOM_OBJS := fsh_example_mod.o
+#+end_src
+
+In this example, we only have one source ~fsh_example_mod.c~, thus ~FSH_CUSTOM_OBJS~ is ~fsh_example_mod.o~.
+
+
+In addition, we have to declare which system calls will be hooked. In this example, two syscalls are hooked: ~sys_execve~ and ~sys_open~:
+#+begin_src sh
+$ cat overrided_syscalls.tbl
+sys_execve
+sys_openat
+#+end_src
+You can use the filename whatever you prefer, just remember to provide it later when executing the header generation script.
+
+
+The hooking function of ~sys_openat~, defined in ~fsh_example_mod.c~, prints the filename whenever a specific uid is matched:
+#+begin_src c
+FSH_SYSCALL_OVERRIDE(sys_openat)
+{
+    char filename[256] = {0};
+    const uid_t uid = 1000;
+
+    if (current->cred->uid.val != uid) return true;
+
+    if (strncpy_from_user(filename, (const char *) *FSH_FUNC_ARG2,
+                          sizeof(filename) - 1) < 0) {
+        return true;
+    }
+
+    pr_info("fsh: file %s opened by uid %u\n", filename,
+            current->cred->uid.val);
+    return true;
+}
+#+end_src
+
+
+Generate the fsh header before compiling the kernel module:
+#+begin_src sh
+./fsh/scripts/gen_syscall_hdr.sh overrided_syscalls.tbl
+#+end_src
+
+To play with the module, use ~make~ to compile and ~make install~ to install it:
+#+begin_src sh
+make && make install
+#+end_src
+
+
+Observe the kernel messages with ~demsg~:
+#+begin_src sh
+[6439379.577902] fsh: file userdb opened by uid 1000
+[6439379.579052] fsh: file / opened by uid 1000
+[6439379.579057] fsh: file usr opened by uid 1000
+[6439379.579063] fsh: file lib opened by uid 1000
+[6439379.579067] fsh: file userdb opened by uid 1000
+[6439379.579287] fsh: file /etc/passwd opened by uid 1000
+[6439379.579319] fsh: file /etc/security/pam_env.conf opened by uid 1000
+#+end_src
+
+You can see we've successfully hooked our open syscall!
